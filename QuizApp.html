@@ -1,0 +1,206 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>UITS Law Club – Quiz + Prize Wheel</title>
+  <style>
+    body {
+      margin: 0;
+      font-family: "Poppins", sans-serif;
+      background: radial-gradient(circle at center, #0f1724 0%, #020617 100%);
+      color: #fff;
+      padding: 20px;
+    }
+
+    .poster-banner { width: 100%; max-width: 980px; margin: 0 auto 14px; }
+    .poster-banner img { width: 100%; height: auto; display: block; border-radius: 14px; box-shadow: 0 8px 24px rgba(0,0,0,.35); }
+
+    h1 { margin: 10px auto; font-size: 28px; font-weight: 800; color: #ffce00; text-align: center; }
+    .card { max-width: 800px; margin: 14px auto; background: rgba(255, 255, 255, 0.08); border-radius: 16px; padding: 20px; }
+    .stepper { display: flex; justify-content: space-between; margin: 10px 0 20px; gap: 8px; }
+    .chip { flex: 1; text-align: center; padding: 8px; border-radius: 999px; border: 1px solid rgba(255,255,255,.25); }
+    .chip.active { background:#ffce00; color:#000; font-weight:700; }
+    .panel { background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.15); border-radius: 12px; padding: 20px; margin: 15px 0; }
+    label { display:block; margin:10px 0 5px; font-weight:600; }
+    input[type=text] { width:100%; padding:10px; border-radius:8px; border: none; outline:none; background: rgba(255,255,255,.06); color:#fff; }
+    button { cursor:pointer; padding:10px 16px; border:none; border-radius:10px; background:#2563eb; color:#fff; font-weight:600; margin:5px; }
+    button:hover { background:#1e40af; }
+    .wheel-container { position: relative; width:420px; height:420px; margin:20px auto; }
+    canvas { border-radius:50%; }
+    .pointer { position:absolute; top:-15px; left:50%; transform:translateX(-50%);
+      width:0; height:0; border-left:20px solid transparent;
+      border-right:20px solid transparent; border-bottom:35px solid #fff; }
+    .hidden { display:none; }
+    .note { color:#bbb; margin-top:10px; font-size:14px; text-align:center; }
+    @media (max-width: 520px){ .wheel-container{ width: 92vw; height: 92vw; } canvas{ width:100% !important; height:100% !important; } }
+  </style>
+</head>
+<body>
+
+  <div class="poster-banner">
+
+    <img src="Maeen.jpg" alt="Vote Maeen Ar Rashid – General Secretary Campaign Poster" />
+  </div>
+
+  <h1>Vote Maeen Ar Rashid – General Secretary </h1>
+  <div class="card">
+    <div class="stepper">
+      <div class="chip active" id="step1">1) Info</div>
+      <div class="chip" id="step2">2) Quiz</div>
+      <div class="chip" id="step3">3) Spin</div>
+    </div>
+
+
+    <section class="panel" id="info-panel">
+      <h2>🎓 Student Information</h2>
+      <label>Name<input id="sname" type="text" placeholder="e.g., Yeasin Arfin"></label>
+      <label>Student ID<input id="sid" type="text" ></label>
+      <label>Department & Batch<input id="sbatch" type="text" ></label>
+      <label>Contact<input id="scontact" type="text" ></label>
+      <button id="startQuiz">Start Quiz</button>
+    </section>
+
+
+    <section class="panel hidden" id="quiz-panel">
+      <h2>⚖️ Quiz</h2>
+      <div id="quiz"></div>
+      <button id="prev">Back</button>
+      <button id="next">Next</button>
+      <button id="submit" class="hidden">Submit Quiz</button>
+      <div id="result" class="note"></div>
+    </section>
+
+    <section class="panel hidden" id="wheel-panel">
+      <h2>🎁 Lucky Wheel</h2>
+      <div class="wheel-container">
+        <div class="pointer"></div>
+        <canvas id="wheel" width="420" height="420"></canvas>
+      </div>
+      <button id="spinBtn">SPIN</button>
+      <div id="wheel-msg" class="note"></div>
+    </section>
+  </div>
+
+<script>
+
+const QUESTIONS = [
+  {q:"Which article guarantees equality before law?",a:["Art.15","Art.27","Art.31","Art.70"],c:1},
+  {q:"'Audi alteram partem' means…",a:["Let the buyer beware","Hear the other side","Beyond reasonable doubt","No man is above the law"],c:1},
+  {q:"Mens Rea means…",a:["The guilty act","The guilty mind","Burden of proof","Defense of alibi"],c:1},
+  {q:"Which writ protects liberty?",a:["Certiorari","Quo warranto","Habeas Corpus","Prohibition"],c:2},
+  {q:"Evidence outside court then used in court is…",a:["Hearsay","Primary","Secondary","Direct"],c:0}
+];
+const PASS_MARK = 3;
+let idx=0, picks=new Array(QUESTIONS.length).fill(null);
+const quizEl=document.getElementById('quiz');
+function renderQ(){
+  const {q,a}=QUESTIONS[idx];
+  quizEl.innerHTML=`<div><b>Q${idx+1}:</b> ${q}</div>`+
+    a.map((t,i)=>`<label><input type='radio' name='opt' value='${i}' ${picks[idx]===i?'checked':''}> ${t}</label>`).join('<br>');
+}
+renderQ();
+quizEl.addEventListener('change',e=>{if(e.target.name==='opt')picks[idx]=Number(e.target.value)});
+document.getElementById('prev').onclick=()=>{if(idx>0){idx--;renderQ();updateNav();}};
+document.getElementById('next').onclick=()=>{if(picks[idx]==null){alert('Pick an option');return;}if(idx<QUESTIONS.length-1){idx++;renderQ();updateNav();}};
+document.getElementById('submit').onclick=()=>{
+  const score=QUESTIONS.reduce((s,cur,i)=>s+(picks[i]===cur.c?1:0),0);
+  document.getElementById('result').textContent=`Score: ${score}/${QUESTIONS.length}`;
+  if(score>=PASS_MARK){document.getElementById('quiz-panel').classList.add('hidden');document.getElementById('wheel-panel').classList.remove('hidden');setStep(3);} else {alert('Score at least '+PASS_MARK+' to continue.');}
+};
+function updateNav(){
+  document.getElementById('prev').disabled=idx===0;
+  document.getElementById('next').classList.toggle('hidden',idx===QUESTIONS.length-1);
+  document.getElementById('submit').classList.toggle('hidden',idx!==QUESTIONS.length-1);
+}
+
+
+function setStep(n){ ['step1','step2','step3'].forEach((id,i)=>{ document.getElementById(id).classList.toggle('active',i===n-1); }); }
+document.getElementById('startQuiz').onclick=()=>{
+  if(!sname.value||!sid.value||!sbatch.value||!scontact.value){alert('Fill all fields');return;}
+  document.getElementById('info-panel').classList.add('hidden');
+  document.getElementById('quiz-panel').classList.remove('hidden');
+  setStep(2);
+};
+
+
+const prizes=["Chocolate","Lots of Love","Pen","Try Again","Keychain"];
+const colors=["#FF6B6B","#FFD93D","#4D96FF","#6BCB77","#FF9F1C"];
+const wheel=document.getElementById('wheel');
+const ctx=wheel.getContext('2d');
+const arc=(2*Math.PI)/prizes.length;
+let spinning=false;
+let spinsUsed=parseInt(localStorage.getItem('spinsUsed')||'0',10);
+let prizeWon=(localStorage.getItem('prizeWon')||'false')==='true';
+
+function drawWheel(rot=0){
+  for(let i=0;i<prizes.length;i++){
+    const start=i*arc+rot;
+    ctx.beginPath();ctx.moveTo(210,210);ctx.arc(210,210,210,start,start+arc);
+    ctx.fillStyle=colors[i%colors.length];ctx.fill();
+    ctx.save();ctx.translate(210,210);ctx.rotate(start+arc/2);
+    ctx.textAlign='right';ctx.fillStyle='#fff';ctx.font='bold 16px Poppins';
+    ctx.fillText(prizes[i],190,10);ctx.restore();
+  }
+}
+drawWheel();
+
+function spinWheel(){
+  if(spinning) return;
+  if(prizeWon){ alert('✅ You already won a prize! No more spins allowed.'); return; }
+  if(spinsUsed>=3){ alert('❌ You already used all 3 spins.'); return; }
+
+  spinning=true; spinsUsed++; localStorage.setItem('spinsUsed', String(spinsUsed));
+
+  let target;
+  if(spinsUsed===3 && !prizeWon){
+
+    target=Math.random()<0.5?0:2;
+  } else {
+    target=Math.floor(Math.random()*prizes.length);
+  }
+
+  const targetAngle=-Math.PI/2-(target*arc+arc/2);
+  const spins=5*2*Math.PI; const endRot=spins+targetAngle; const start=performance.now(), dur=5000;
+  (function anim(t){
+    const p=Math.min(1,(t-start)/dur); const ease=1-Math.pow(1-p,3);
+    ctx.clearRect(0,0,420,420);
+    ctx.save(); ctx.translate(210,210); ctx.rotate(ease*endRot); ctx.translate(-210,-210); drawWheel(); ctx.restore();
+    if(p<1) requestAnimationFrame(anim); else { spinning=false; onLanded(target); }
+  })(start);
+}
+
+function onLanded(i){
+  const prize=prizes[i];
+  document.getElementById('wheel-msg').textContent=`Result: ${prize}`;
+  if(prize==='Chocolate' || prize==='Pen'){
+    prizeWon=true; localStorage.setItem('prizeWon','true');
+    submitToGoogleForm(prize);
+    alert(`🎉 Congratulations! You won ${prize}.`);
+  } else {
+    alert('No main prize this time. Try again!');
+  }
+}
+
+document.getElementById('spinBtn').onclick=spinWheel;
+
+
+const FORM_ACTION='https://docs.google.com/forms/d/e/1FAIpQLSeOJXhScOSdFn-l8ym5XotvcqhoXCup9DolpbJSLf744chl-w/formResponse';
+const ENTRY_NAME='entry.1078129113';
+const ENTRY_ID='entry.2127406322';
+const ENTRY_BATCH='entry.2101421346';
+const ENTRY_CONTACT='entry.126849498';
+const ENTRY_PRIZE='entry.1993944278';
+
+function submitToGoogleForm(prize){
+  const formData=new FormData();
+  formData.append(ENTRY_NAME, sname.value.trim());
+  formData.append(ENTRY_ID, sid.value.trim());
+  formData.append(ENTRY_BATCH, sbatch.value.trim());
+  formData.append(ENTRY_CONTACT, scontact.value.trim());
+  formData.append(ENTRY_PRIZE, prize);
+  fetch(FORM_ACTION,{method:'POST',mode:'no-cors',body:formData});
+}
+</script>
+</body>
+</html>
